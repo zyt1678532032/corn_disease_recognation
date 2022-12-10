@@ -6,3 +6,4 @@
 2. 对图像进行预处理以符合模型的图像输入大小
 3. 使用AndroidX Camera库操作相机
 4. 使用TensorFlow Lite中ImageProcessor将Bitmap处理为TensorImage，BaseOptions设置线程来加速模型的计算
+<img src="./assets/app图片.png" width = "200" height = "360" alt="" align=center />
