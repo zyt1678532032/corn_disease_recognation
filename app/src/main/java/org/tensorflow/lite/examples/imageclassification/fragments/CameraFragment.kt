@@ -1,6 +1,5 @@
 package org.tensorflow.lite.examples.imageclassification.fragments
 
-import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -9,12 +8,7 @@ import android.util.Log
 import android.view.*
 import android.widget.AdapterView
 import android.widget.Toast
-import androidx.camera.core.AspectRatio
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.Camera
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.Preview
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -49,7 +43,7 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
-    /** Blocking camera operations are performed using this executor */
+    // 相机的阻塞操作
     private lateinit var cameraExecutor: ExecutorService
 
     override fun onResume() {
@@ -64,8 +58,6 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
     override fun onDestroyView() {
         _fragmentCameraBinding = null
         super.onDestroyView()
-
-        // Shut down our background executor
         cameraExecutor.shutdown()
     }
 
@@ -79,7 +71,6 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
         return fragmentCameraBinding.root
     }
 
-    @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -94,23 +85,20 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         fragmentCameraBinding.viewFinder.post {
-            // Set up the camera and its use cases
             setUpCamera()
         }
 
-        // Attach listeners to UI control widgets
+        // 初始化底部的UI控制逻辑
         initBottomSheetControls()
     }
 
-    // Initialize CameraX, and prepare to bind the camera use cases
+    // 初始化CameraX
     private fun setUpCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener(
             {
                 // CameraProvider
                 cameraProvider = cameraProviderFuture.get()
-
-                // Build and bind the camera use cases
                 bindCameraUseCases()
             },
             ContextCompat.getMainExecutor(requireContext())
@@ -203,18 +191,18 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>?) {
-                    /* no op */
                 }
             }
     }
 
-    // Update the values displayed in the bottom sheet. Reset classifier.
+    // 更新底部的数值，重置classifier
     private fun updateControlsUi() {
         fragmentCameraBinding.bottomSheetLayout.maxResultsValue.text =
             imageClassifierHelper.maxResults.toString()
 
         fragmentCameraBinding.bottomSheetLayout.thresholdValue.text =
             String.format("%.2f", imageClassifierHelper.threshold)
+
         fragmentCameraBinding.bottomSheetLayout.threadsValue.text =
             imageClassifierHelper.numThreads.toString()
         // Needs to be cleared instead of reinitialized because the GPU
@@ -227,26 +215,24 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
         imageAnalyzer?.targetRotation = fragmentCameraBinding.viewFinder.display.rotation
     }
 
-    // Declare and bind preview, capture and analysis use cases
-    @SuppressLint("UnsafeOptInUsageError")
     private fun bindCameraUseCases() {
 
         // CameraProvider
         val cameraProvider =
             cameraProvider ?: throw IllegalStateException("Camera initialization failed.")
 
-        // CameraSelector - makes assumption that we're only using the back camera
+        // CameraSelector 只使用后置摄像头
         val cameraSelector =
             CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
 
-        // Preview. Only using the 4:3 ratio because this is the closest to our models
+        // Preview
         preview =
             Preview.Builder()
                 .setTargetAspectRatio(AspectRatio.RATIO_4_3)
                 .setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
                 .build()
 
-        // ImageAnalysis. Using RGBA 8888 to match how our models work
+        // ImageAnalysis. 使用RGBA 8888来匹配模型
         imageAnalyzer =
             ImageAnalysis.Builder()
                 .setTargetAspectRatio(AspectRatio.RATIO_4_3)
@@ -254,7 +240,6 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
-                // The analyzer can then be assigned to the instance
                 .also {
                     it.setAnalyzer(cameraExecutor) { image ->
                         if (!::bitmapBuffer.isInitialized) {
@@ -279,7 +264,6 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
             // camera provides access to CameraControl & CameraInfo
             camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
 
-            // Attach the viewfinder's surface provider to preview use case
             preview?.setSurfaceProvider(fragmentCameraBinding.viewFinder.surfaceProvider)
         } catch (exc: Exception) {
             Log.e(TAG, "Use case binding failed", exc)
@@ -304,14 +288,11 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
     }
 
     private fun classifyImage(image: ImageProxy) {
-        // Copy out RGB bits to the shared bitmap buffer
+        // 将RGB字节数据复制到共享的bitmap buffer中
         image.use { bitmapBuffer.copyPixelsFromBuffer(image.planes[0].buffer) }
-
-        // Pass Bitmap and rotation to the image classifier helper for processing and classification
         imageClassifierHelper.classify(bitmapBuffer, getScreenOrientation())
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     override fun onError(error: String) {
         activity?.runOnUiThread {
             Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
@@ -320,7 +301,6 @@ class CameraFragment : Fragment(), ImageClassifierHelper.ClassifierListener {
         }
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     override fun onResults(
         results: List<Classifications>?,
         inferenceTime: Long

@@ -71,7 +71,7 @@ class ImageClassifierHelper(
                 ImageClassifier.createFromFileAndOptions(context, modelName, optionsBuilder.build())
         } catch (e: IllegalStateException) {
             imageClassifierListener?.onError(
-                "Image classifier failed to initialize. See error logs for details"
+                "Image classifier failed to initialize."
             )
             Log.e(TAG, "TFLite failed to load model with error: " + e.message)
         }
@@ -82,18 +82,15 @@ class ImageClassifierHelper(
             setupImageClassifier()
         }
 
-        // Inference time is the difference between the system time at the start and finish of the
-        // process
         var inferenceTime = SystemClock.uptimeMillis()
 
-        // Create preprocessor for the image.
-        // See https://www.tensorflow.org/lite/inference_with_metadata/
-        //            lite_support#imageprocessor_architecture
+        // 图像预处理
+        // https://www.tensorflow.org/lite/inference_with_metadata/lite_support#imageprocessor_architecture
         val imageProcessor =
             ImageProcessor.Builder()
                 .build()
 
-        // Preprocess the image and convert it into a TensorImage for classification.
+        // 预处理图像，将图像转化为TensorImage
         val tensorImage = imageProcessor.process(TensorImage.fromBitmap(image))
 
         val imageProcessingOptions = ImageProcessingOptions.builder()
@@ -108,7 +105,7 @@ class ImageClassifierHelper(
         )
     }
 
-    // Receive the device rotation (Surface.x values range from 0->3) and return EXIF orientation
+    // 设备旋转的处理
     // http://jpegclub.org/exif_orientation.html
     private fun getOrientationFromRotation(rotation: Int) : ImageProcessingOptions.Orientation {
         when (rotation) {
